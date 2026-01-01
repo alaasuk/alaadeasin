@@ -7,10 +7,16 @@ import InfographicPreview from './components/InfographicPreview';
 import { generateInfographicContent } from './services/geminiService';
 
 declare var html2canvas: any;
+
+// Define the AIStudio interface to match the expected global type
+interface AIStudio {
+  hasSelectedApiKey(): Promise<boolean>;
+  openSelectKey(): Promise<void>;
+}
+
 declare global {
   interface Window {
-    // Using any to avoid conflict with existing global AIStudio type and satisfy compiler rules
-    aistudio: any;
+    aistudio: AIStudio;
   }
 }
 
@@ -33,11 +39,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkKey = async () => {
-      // Use the injected window.aistudio to check for key selection
       if (window.aistudio) {
         try {
           const hasKey = await window.aistudio.hasSelectedApiKey();
-          // If no key in environment and no key selected in studio
+          // إذا لم يكن هناك مفتاح في البيئة ولا مفتاح مختار يدوياً
           if (!hasKey && !process.env.API_KEY) {
             setIsKeyReady(false);
           }
@@ -52,9 +57,7 @@ const App: React.FC = () => {
   const handleSelectKey = async () => {
     if (window.aistudio) {
       try {
-        // Trigger the key selection dialog
         await window.aistudio.openSelectKey();
-        // Assume success to mitigate race conditions
         setIsKeyReady(true);
       } catch (e) {
         console.error("Error opening key dialog:", e);
@@ -79,10 +82,9 @@ const App: React.FC = () => {
       setResult(data);
     } catch (err: any) {
       console.error("Critical Generation failure:", err);
-      // Reset key state if the entity (key) is not found/invalid
-      if (err.message?.includes("Requested entity was not found")) {
+      if (err.message?.includes("Requested entity was not found") || err.message?.includes("API_KEY")) {
         setIsKeyReady(false);
-        setError("انتهت صلاحية الجلسة أو المفتاح غير صالح. يرجى إعادة اختيار المفتاح.");
+        setError("المفتاح غير مفعل أو غير صالح. يرجى الضغط على زر 'إعداد المفتاح' بالأعلى.");
       } else {
         setError(err.message || "حدث خطأ غير متوقع. يرجى التأكد من مفتاح الـ API والمحاولة لاحقاً.");
       }
@@ -144,6 +146,19 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 flex flex-col items-center p-4 md:p-8" dir="rtl">
+      {/* زر إعداد المفتاح في أعلى الصفحة دائماً */}
+      <div className="fixed top-4 left-4 z-[100]">
+        <button 
+          onClick={handleSelectKey}
+          className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 rounded-full text-amber-500 text-sm font-bold shadow-lg transition-all"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+          </svg>
+          إعداد مفتاح الـ API
+        </button>
+      </div>
+
       {result && (
         <div className="capture-hidden-layer" aria-hidden="true" dir="rtl">
           {result.parts.map((part, idx) => (
@@ -158,7 +173,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <header className="w-full max-w-lg flex flex-col items-center mb-10 mt-4">
+      <header className="w-full max-w-lg flex flex-col items-center mb-10 mt-12">
         <div className="w-16 h-16 bg-gradient-to-br from-emerald-600 to-emerald-900 rounded-2xl flex items-center justify-center text-white shadow-2xl mb-4 border border-white/10">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -177,7 +192,7 @@ const App: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold text-white">تفعيل الاتصال بالذكاء الاصطناعي</h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            لضمان عمل الأداة على Netlify، يرجى تفعيل مفتاح الـ API الخاص بك. يتطلب ذلك مشروعاً مفعلاً فيه الدفع (Billing).
+            لضمان عمل الأداة على Netlify، يرجى تفعيل مفتاح الـ API الخاص بك يدوياً من الزر في الأعلى أو الزر أدناه.
           </p>
           <a 
             href="https://ai.google.dev/gemini-api/docs/billing" 
@@ -191,7 +206,7 @@ const App: React.FC = () => {
             onClick={handleSelectKey}
             className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-white font-black shadow-xl transition-all"
           >
-            إعداد مفتاح الـ API
+            إعداد مفتاح الـ API الآن
           </button>
         </main>
       ) : !result ? (

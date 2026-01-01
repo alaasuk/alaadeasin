@@ -3,14 +3,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
-  // إنشاء نسخة جديدة في كل مرة لضمان استخدام المفتاح الأحدث من الجلسة
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
+  // Always create a new instance right before the call to ensure the latest API key is used
+  if (!process.env.API_KEY) {
     throw new Error("لم يتم العثور على المفتاح البرمجي. يرجى الضغط على زر 'إعداد مفتاح الـ API'.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `Generate a structured Islamic infographic content for "${topic}". 
   Provide exactly 6 distinct parts/images. 
@@ -21,7 +19,7 @@ export async function generateInfographicContent(topic: string): Promise<Generat
   4. spiritualTouch: A short emotional or faith-based sentence for the bottom.
   
   Make all content in Arabic. Use an elegant, professional, and spiritual tone.
-  Return ONLY a valid JSON object. No markdown wrappers like \`\`\`json.`;
+  Return ONLY a valid JSON object. No markdown wrappers.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -58,12 +56,13 @@ export async function generateInfographicContent(topic: string): Promise<Generat
     const text = response.text;
     if (!text) throw new Error("لم يتم استلام رد من الذكاء الاصطناعي.");
     
-    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    return JSON.parse(cleanJson) as GenerationResult;
+    // When using responseMimeType: "application/json", the result should be clean JSON.
+    // However, we trim just in case of any trailing whitespace.
+    return JSON.parse(text.trim()) as GenerationResult;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    // إذا كان الخطأ متعلقاً بالمفتاح
-    if (error.message?.includes("key")) {
+    // Handle key errors specifically
+    if (error.message?.includes("key") || error.message?.includes("API_KEY")) {
        throw new Error("حدث خطأ في صلاحية المفتاح. يرجى التأكد من أن مشروعك في Google Cloud يدعم الدفع (Paid Project).");
     }
     throw new Error(error.message || "حدث خطأ أثناء الاتصال بالخادم.");
