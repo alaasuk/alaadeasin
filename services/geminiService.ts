@@ -3,20 +3,21 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
-  // محاولة جلب المفتاح بكل المسميات الممكنة التي قد توفرها بيئة Netlify أو Vite
+  // محاولة جلب المفتاح من كافة المصادر الممكنة في المتصفح وبيئة البناء
   const apiKey = 
-    process.env.API_KEY || 
-    (process.env as any).GOOGLE_API_KEY || 
-    (process.env as any).VITE_GOOGLE_API_KEY ||
+    (process.env?.API_KEY) || 
     (window as any).process?.env?.API_KEY ||
-    (window as any).process?.env?.GOOGLE_API_KEY;
+    (import.meta as any).env?.VITE_API_KEY ||
+    (import.meta as any).env?.API_KEY ||
+    (process.env as any).GOOGLE_API_KEY;
 
-  // التحقق من أن المفتاح ليس مجرد نص "undefined" كما يحدث في بعض بيئات الـ Build
-  if (!apiKey || apiKey === "undefined" || apiKey === "null") {
-    throw new Error("لم يتم العثور على المفتاح البرمجي (API Key). يرجى التأكد من تسمية المتغير API_KEY في إعدادات Netlify (Environment Variables) ثم إعادة عمل Deploy للموقع.");
+  // فحص صارم للقيمة الناتجة
+  if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey.length < 10) {
+    console.error("API Key missing. Current process.env:", process.env);
+    throw new Error("⚠️ لم يتم تفعيل المفتاح بعد. يرجى الذهاب إلى Netlify Deploys والضغط على 'Trigger deploy' ثم 'Clear cache and deploy site' لكي يتم حقن المفتاح الذي أضفته.");
   }
 
-  // إنشاء نسخة جديدة من GoogleGenAI لضمان استخدام أحدث مفتاح متاح
+  // إنشاء العميل باستخدام المفتاح الذي تم العثور عليه
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `Generate a structured Islamic infographic content for "${topic}". 
@@ -69,7 +70,7 @@ export async function generateInfographicContent(topic: string): Promise<Generat
   } catch (error: any) {
     console.error("Gemini API Error details:", error);
     if (error.message?.includes("403") || error.message?.includes("API_KEY_INVALID")) {
-      throw new Error("المفتاح البرمجي غير صحيح أو غير مفعل. يرجى التأكد من صلاحية المفتاح في Google AI Studio.");
+      throw new Error("المفتاح البرمجي الذي أدخلته في Netlify غير صالح. يرجى التأكد من نسخه بشكل صحيح من Google AI Studio.");
     }
     throw error;
   }
