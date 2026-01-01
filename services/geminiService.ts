@@ -3,22 +3,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
-  // محاولة جلب المفتاح من كافة المصادر الممكنة في المتصفح وبيئة البناء
-  const apiKey = 
-    (process.env?.API_KEY) || 
-    (window as any).process?.env?.API_KEY ||
-    (import.meta as any).env?.VITE_API_KEY ||
-    (import.meta as any).env?.API_KEY ||
-    (process.env as any).GOOGLE_API_KEY;
+  // استخدام المفتاح مباشرة من بيئة التشغيل كما تطلب المكتبة
+  // سيقوم النظام تلقائياً باستبدال هذه القيمة بالمفتاح الذي وضعته في Netlify
+  const apiKey = process.env.API_KEY;
 
-  // فحص صارم للقيمة الناتجة
-  if (!apiKey || apiKey === "undefined" || apiKey === "null" || apiKey.length < 10) {
-    console.error("API Key missing. Current process.env:", process.env);
-    throw new Error("⚠️ لم يتم تفعيل المفتاح بعد. يرجى الذهاب إلى Netlify Deploys والضغط على 'Trigger deploy' ثم 'Clear cache and deploy site' لكي يتم حقن المفتاح الذي أضفته.");
-  }
-
-  // إنشاء العميل باستخدام المفتاح الذي تم العثور عليه
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: apiKey as string });
 
   const prompt = `Generate a structured Islamic infographic content for "${topic}". 
   Provide exactly 6 distinct parts/images. 
@@ -63,15 +52,14 @@ export async function generateInfographicContent(topic: string): Promise<Generat
       }
     });
 
-    const text = response.text || "";
-    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
+    const text = response.text;
+    if (!text) throw new Error("لم يتم استلام نص من الذكاء الاصطناعي.");
     
+    const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
     return JSON.parse(cleanJson) as GenerationResult;
   } catch (error: any) {
-    console.error("Gemini API Error details:", error);
-    if (error.message?.includes("403") || error.message?.includes("API_KEY_INVALID")) {
-      throw new Error("المفتاح البرمجي الذي أدخلته في Netlify غير صالح. يرجى التأكد من نسخه بشكل صحيح من Google AI Studio.");
-    }
-    throw error;
+    console.error("Gemini API Error:", error);
+    // إظهار الخطأ الحقيقي للمستخدم للمساعدة في التشخيص
+    throw new Error(error.message || "فشل الاتصال بـ Gemini. تأكد من أن المفتاح البرمجي API_KEY صحيح ومفعل في إعدادات Netlify.");
   }
 }
