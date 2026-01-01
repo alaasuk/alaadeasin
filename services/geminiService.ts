@@ -3,10 +3,15 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
-  // إنشاء الكائن مع التأكد من وجود مفتاح API
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please check your environment variables.");
+  // البحث عن المفتاح بكل المسميات الممكنة لضمان التوافق مع إعدادات المستخدم في Netlify
+  const apiKey = 
+    process.env.API_KEY || 
+    process.env.GOOGLE_API_KEY || 
+    process.env.VITE_GOOGLE_API_KEY || 
+    (window as any).process?.env?.GOOGLE_API_KEY;
+
+  if (!apiKey || apiKey === "undefined") {
+    throw new Error("لم يتم العثور على المفتاح البرمجي (API Key). يرجى التأكد من تسمية المتغير API_KEY في إعدادات Netlify وإعادة بناء الموقع.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -55,12 +60,15 @@ export async function generateInfographicContent(topic: string): Promise<Generat
     });
 
     const text = response.text || "";
-    // تنظيف النص في حال وجود markdown أو نصوص زائدة
     const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
     
     return JSON.parse(cleanJson) as GenerationResult;
-  } catch (error) {
-    console.error("Gemini API Error:", error);
+  } catch (error: any) {
+    console.error("Gemini API Error details:", error);
+    // توضيح الخطأ للمستخدم بدلاً من الفشل الصامت
+    if (error.message?.includes("API_KEY_INVALID")) {
+      throw new Error("المفتاح البرمجي غير صالح. يرجى التأكد من نسخ المفتاح الصحيح من Google AI Studio.");
+    }
     throw error;
   }
 }
