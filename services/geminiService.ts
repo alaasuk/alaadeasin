@@ -3,11 +3,15 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
-  // استخدام المفتاح مباشرة من بيئة التشغيل كما تطلب المكتبة
-  // سيقوم النظام تلقائياً باستبدال هذه القيمة بالمفتاح الذي وضعته في Netlify
+  // استخدام المفتاح مباشرة كما تقتضي التعليمات الصارمة للمكتبة
+  // تأكد أن الاسم في Netlify هو API_KEY تماماً
   const apiKey = process.env.API_KEY;
 
-  const ai = new GoogleGenAI({ apiKey: apiKey as string });
+  if (!apiKey) {
+    throw new Error("لم يتم العثور على المفتاح البرمجي. يرجى التأكد من إضافة API_KEY في إعدادات Netlify وعمل Clear cache and deploy site.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   const prompt = `Generate a structured Islamic infographic content for "${topic}". 
   Provide exactly 6 distinct parts/images. 
@@ -53,13 +57,12 @@ export async function generateInfographicContent(topic: string): Promise<Generat
     });
 
     const text = response.text;
-    if (!text) throw new Error("لم يتم استلام نص من الذكاء الاصطناعي.");
+    if (!text) throw new Error("لم يتم استلام رد من الذكاء الاصطناعي.");
     
     const cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
     return JSON.parse(cleanJson) as GenerationResult;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    // إظهار الخطأ الحقيقي للمستخدم للمساعدة في التشخيص
-    throw new Error(error.message || "فشل الاتصال بـ Gemini. تأكد من أن المفتاح البرمجي API_KEY صحيح ومفعل في إعدادات Netlify.");
+    throw new Error(error.message || "حدث خطأ أثناء الاتصال بالخادم.");
   }
 }
