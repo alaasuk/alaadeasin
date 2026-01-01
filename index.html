@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>استوديو المصمم - Islamic Infographic Studio</title>
+    <title>استوديو المحراب - Islamic Infographic Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;900&display=swap" rel="stylesheet">
@@ -14,36 +14,35 @@
         background-color: #020617;
         margin: 0;
         padding: 0;
+        overflow-x: hidden;
       }
-      /* تحسين عرض النصوص العربية لضمان اتصال الحروف عند التحويل لصور */
-      * {
-        text-rendering: optimizeLegibility;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
+      /* تحسينات لربط الحروف العربية ومنع تقطعها في الصور */
       .font-heading {
         font-family: 'Noto Kufi Arabic', sans-serif;
-        letter-spacing: 0 !important; /* هام جداً لربط الحروف العربية */
       }
-      .font-quran {
-        font-family: 'Amiri', serif;
+      * {
+        letter-spacing: normal !important;
+        word-spacing: normal !important;
+        text-rendering: optimizeLegibility;
       }
+      /* حاوية التحميل المخفية */
+      .capture-hidden-layer {
+        position: absolute;
+        left: -5000px;
+        top: 0;
+        z-index: -100;
+        pointer-events: none;
+      }
+      /* تحسين السكرول بار */
       ::-webkit-scrollbar {
-        width: 6px;
+        width: 5px;
       }
       ::-webkit-scrollbar-track {
-        background: transparent;
+        background: #020617;
       }
       ::-webkit-scrollbar-thumb {
-        background: #334155;
+        background: #10b981;
         border-radius: 10px;
-      }
-      
-      /* منع القص أثناء التحميل */
-      .capture-container {
-        position: absolute;
-        left: -9999px;
-        top: 0;
       }
     </style>
   <script type="importmap">
