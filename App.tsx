@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { THEMES } from './constants';
 import { ThemeType, AppTheme, GenerationResult } from './types';
 import ThemeOption from './components/ThemeOption';
@@ -7,6 +7,12 @@ import InfographicPreview from './components/InfographicPreview';
 import { generateInfographicContent } from './services/geminiService';
 
 declare var html2canvas: any;
+declare global {
+  interface Window {
+    // Using any to avoid conflict with existing global AIStudio type and satisfy compiler rules
+    aistudio: any;
+  }
+}
 
 const App: React.FC = () => {
   const [topic, setTopic] = useState('');
@@ -16,6 +22,7 @@ const App: React.FC = () => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<number | null>(null);
+  const [isKeyReady, setIsKeyReady] = useState<boolean>(true);
 
   const loadingMessages = [
     "جاري تصميم المحراب الرقمي...",
@@ -23,6 +30,37 @@ const App: React.FC = () => {
     "تجهيز بطاقات المعلومات...",
     "وضع اللمسات الروحانية الأخيرة..."
   ];
+
+  useEffect(() => {
+    const checkKey = async () => {
+      // Use the injected window.aistudio to check for key selection
+      if (window.aistudio) {
+        try {
+          const hasKey = await window.aistudio.hasSelectedApiKey();
+          // If no key in environment and no key selected in studio
+          if (!hasKey && !process.env.API_KEY) {
+            setIsKeyReady(false);
+          }
+        } catch (e) {
+          console.error("Error checking API key:", e);
+        }
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      try {
+        // Trigger the key selection dialog
+        await window.aistudio.openSelectKey();
+        // Assume success to mitigate race conditions
+        setIsKeyReady(true);
+      } catch (e) {
+        console.error("Error opening key dialog:", e);
+      }
+    }
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
@@ -41,8 +79,13 @@ const App: React.FC = () => {
       setResult(data);
     } catch (err: any) {
       console.error("Critical Generation failure:", err);
-      // عرض رسالة الخطأ الحقيقية للمساعدة في التشخيص
-      setError(err.message || "حدث خطأ غير متوقع. يرجى التأكد من مفتاح الـ API والمحاولة لاحقاً.");
+      // Reset key state if the entity (key) is not found/invalid
+      if (err.message?.includes("Requested entity was not found")) {
+        setIsKeyReady(false);
+        setError("انتهت صلاحية الجلسة أو المفتاح غير صالح. يرجى إعادة اختيار المفتاح.");
+      } else {
+        setError(err.message || "حدث خطأ غير متوقع. يرجى التأكد من مفتاح الـ API والمحاولة لاحقاً.");
+      }
     } finally {
       clearInterval(interval);
       setIsGenerating(false);
@@ -95,7 +138,7 @@ const App: React.FC = () => {
     if (!result) return;
     for (let i = 0; i < result.parts.length; i++) {
       await downloadImage(i);
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      await new Promise(resolve => setTimeout(resolve, 800)); 
     }
   };
 
@@ -125,7 +168,33 @@ const App: React.FC = () => {
         <p className="text-slate-500 text-sm font-medium uppercase tracking-widest text-center">التصميم الذكي للمحتوى الإيماني</p>
       </header>
 
-      {!result ? (
+      {!isKeyReady ? (
+        <main className="w-full max-w-md bg-white/5 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 border border-white/10 flex flex-col items-center text-center gap-6">
+          <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500 mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-white">تفعيل الاتصال بالذكاء الاصطناعي</h2>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            لضمان عمل الأداة على Netlify، يرجى تفعيل مفتاح الـ API الخاص بك. يتطلب ذلك مشروعاً مفعلاً فيه الدفع (Billing).
+          </p>
+          <a 
+            href="https://ai.google.dev/gemini-api/docs/billing" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-emerald-500 text-xs font-bold underline mb-2"
+          >
+            تعرف على متطلبات الدفع (Google Billing)
+          </a>
+          <button 
+            onClick={handleSelectKey}
+            className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-white font-black shadow-xl transition-all"
+          >
+            إعداد مفتاح الـ API
+          </button>
+        </main>
+      ) : !result ? (
         <main className="w-full max-w-md bg-white/5 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-8 border border-white/10 flex flex-col gap-6">
           <div className="flex flex-col gap-3">
             <label className="text-slate-400 font-bold text-xs uppercase tracking-widest px-1">الموضوع</label>
@@ -185,7 +254,10 @@ const App: React.FC = () => {
         <main className="w-full max-w-6xl flex flex-col items-center gap-10">
           <div className="w-full flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/10">
             <h2 className="text-3xl font-black text-white">{result.surahName}</h2>
-            <button onClick={() => {setResult(null); setTopic(''); setError(null);}} className="text-white bg-white/10 px-6 py-2 rounded-xl font-bold">موضوع جديد</button>
+            <div className="flex gap-2">
+               <button onClick={handleSelectKey} className="text-white/60 hover:text-white bg-white/5 px-4 py-2 rounded-xl text-xs font-bold transition-all">تغيير المفتاح</button>
+               <button onClick={() => {setResult(null); setTopic(''); setError(null);}} className="text-white bg-emerald-600 hover:bg-emerald-500 px-6 py-2 rounded-xl font-bold transition-all">موضوع جديد</button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 w-full">
             {result.parts.map((part, idx) => (
@@ -197,7 +269,7 @@ const App: React.FC = () => {
               </div>
             ))}
           </div>
-          <button onClick={downloadAll} className="px-10 py-6 bg-emerald-600 rounded-2xl font-black text-xl shadow-2xl text-white mb-16">تحميل المجموعة كاملة</button>
+          <button onClick={downloadAll} className="px-10 py-6 bg-emerald-600 rounded-2xl font-black text-xl shadow-2xl text-white mb-16 hover:bg-emerald-500 transition-all">تحميل المجموعة كاملة</button>
         </main>
       )}
     </div>

@@ -3,12 +3,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
-  // استخدام المفتاح مباشرة كما تقتضي التعليمات الصارمة للمكتبة
-  // تأكد أن الاسم في Netlify هو API_KEY تماماً
+  // إنشاء نسخة جديدة في كل مرة لضمان استخدام المفتاح الأحدث من الجلسة
   const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    throw new Error("لم يتم العثور على المفتاح البرمجي. يرجى التأكد من إضافة API_KEY في إعدادات Netlify وعمل Clear cache and deploy site.");
+    throw new Error("لم يتم العثور على المفتاح البرمجي. يرجى الضغط على زر 'إعداد مفتاح الـ API'.");
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -63,6 +62,10 @@ export async function generateInfographicContent(topic: string): Promise<Generat
     return JSON.parse(cleanJson) as GenerationResult;
   } catch (error: any) {
     console.error("Gemini API Error:", error);
+    // إذا كان الخطأ متعلقاً بالمفتاح
+    if (error.message?.includes("key")) {
+       throw new Error("حدث خطأ في صلاحية المفتاح. يرجى التأكد من أن مشروعك في Google Cloud يدعم الدفع (Paid Project).");
+    }
     throw new Error(error.message || "حدث خطأ أثناء الاتصال بالخادم.");
   }
 }
