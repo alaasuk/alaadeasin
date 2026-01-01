@@ -9,9 +9,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;900&display=swap" rel="stylesheet">
     <script>
-      // تحسين: تعريف التوقعات البرمجية دون مسح القيم الحقيقية المحقونة من Netlify
-      window.process = window.process || {};
-      window.process.env = window.process.env || {};
+      // تعريف متغير process بشكل آمن لضمان عدم تعطل المكتبات في المتصفح
+      // وعدم مسح أي قيم قد تكون محقونة مسبقاً
+      window.process = window.process || { env: {} };
     </script>
     <style>
       body {

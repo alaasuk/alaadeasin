@@ -3,17 +3,20 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
-  // البحث عن المفتاح بكل المسميات الممكنة لضمان التوافق مع إعدادات المستخدم في Netlify
+  // محاولة جلب المفتاح بكل المسميات الممكنة التي قد توفرها بيئة Netlify أو Vite
   const apiKey = 
     process.env.API_KEY || 
-    process.env.GOOGLE_API_KEY || 
-    process.env.VITE_GOOGLE_API_KEY || 
+    (process.env as any).GOOGLE_API_KEY || 
+    (process.env as any).VITE_GOOGLE_API_KEY ||
+    (window as any).process?.env?.API_KEY ||
     (window as any).process?.env?.GOOGLE_API_KEY;
 
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("لم يتم العثور على المفتاح البرمجي (API Key). يرجى التأكد من تسمية المتغير API_KEY في إعدادات Netlify وإعادة بناء الموقع.");
+  // التحقق من أن المفتاح ليس مجرد نص "undefined" كما يحدث في بعض بيئات الـ Build
+  if (!apiKey || apiKey === "undefined" || apiKey === "null") {
+    throw new Error("لم يتم العثور على المفتاح البرمجي (API Key). يرجى التأكد من تسمية المتغير API_KEY في إعدادات Netlify (Environment Variables) ثم إعادة عمل Deploy للموقع.");
   }
 
+  // إنشاء نسخة جديدة من GoogleGenAI لضمان استخدام أحدث مفتاح متاح
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `Generate a structured Islamic infographic content for "${topic}". 
@@ -65,9 +68,8 @@ export async function generateInfographicContent(topic: string): Promise<Generat
     return JSON.parse(cleanJson) as GenerationResult;
   } catch (error: any) {
     console.error("Gemini API Error details:", error);
-    // توضيح الخطأ للمستخدم بدلاً من الفشل الصامت
-    if (error.message?.includes("API_KEY_INVALID")) {
-      throw new Error("المفتاح البرمجي غير صالح. يرجى التأكد من نسخ المفتاح الصحيح من Google AI Studio.");
+    if (error.message?.includes("403") || error.message?.includes("API_KEY_INVALID")) {
+      throw new Error("المفتاح البرمجي غير صحيح أو غير مفعل. يرجى التأكد من صلاحية المفتاح في Google AI Studio.");
     }
     throw error;
   }
