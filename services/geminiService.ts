@@ -2,9 +2,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { GenerationResult } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
-
 export async function generateInfographicContent(topic: string): Promise<GenerationResult> {
+  // إنشاء الكائن داخل الدالة لضمان توفر مفتاح API المحدث من البيئة
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+
   const prompt = `Generate a structured Islamic infographic content for "${topic}". 
   Follow this logic:
   Provide 6 distinct parts/images. 

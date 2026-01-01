@@ -53,13 +53,14 @@ const App: React.FC = () => {
 
     setIsDownloading(index);
     try {
-      // Ensure fonts are loaded before capture
+      // الانتظار للتأكد من تحميل الخطوط تماماً
       await document.fonts.ready;
+      // تأخير إضافي لضمان استقرار محرك الريندر للجوالات
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // html2canvas optimized settings for mobile/static hosting
       const canvas = await html2canvas(element, {
         useCORS: true,
-        scale: 2, // Scale 2 is safe for most mobile devices to prevent crashes
+        scale: 2, 
         backgroundColor: selectedTheme.bg,
         logging: false,
         allowTaint: true,
@@ -68,10 +69,11 @@ const App: React.FC = () => {
         onclone: (clonedDoc: Document) => {
           const card = clonedDoc.getElementById(`capture-card-${index}`);
           if (card) {
-            // Ensure visibility in cloned document
             card.style.display = 'flex';
             card.style.position = 'relative';
             card.style.left = '0';
+            // التأكد من تطبيق الاتجاه من اليمين لليسار في النسخة المستنسخة
+            card.setAttribute('dir', 'rtl');
           }
         }
       });
@@ -85,7 +87,7 @@ const App: React.FC = () => {
       document.body.removeChild(link);
     } catch (err) {
       console.error("Failed to download image", err);
-      alert("حدثت مشكلة أثناء محاولة حفظ الصورة. جرب استخدام متصفح كروم أو الضغط مطولاً على البطاقة لحفظها.");
+      alert("حدثت مشكلة أثناء محاولة حفظ الصورة. جرب استخدام متصفح كروم.");
     } finally {
       setIsDownloading(null);
     }
@@ -95,7 +97,7 @@ const App: React.FC = () => {
     if (!result) return;
     for (let i = 0; i < result.parts.length; i++) {
       await downloadImage(i);
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Increased delay for stability
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
     }
   };
 
@@ -107,9 +109,9 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 flex flex-col items-center p-4 md:p-8">
       
-      {/* Off-screen capture container */}
+      {/* Container مخفي للتحميل فقط لضمان الجودة العالية */}
       {result && (
-        <div className="capture-hidden-layer" aria-hidden="true">
+        <div className="capture-hidden-layer" aria-hidden="true" dir="rtl">
           {result.parts.map((part, idx) => (
             <InfographicPreview 
               key={`capture-key-${idx}`}

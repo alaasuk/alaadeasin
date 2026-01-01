@@ -8,6 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;900&display=swap" rel="stylesheet">
+    <script>
+      // منع الشاشة البيضاء: تعريف متغير process الذي تتوقعه بعض المكتبات
+      window.process = window.process || { env: {} };
+    </script>
     <style>
       body {
         font-family: 'Tajawal', sans-serif;
@@ -16,19 +20,21 @@
         padding: 0;
         overflow-x: hidden;
       }
-      /* تحسينات لربط الحروف العربية ومنع تقطعها في الصور */
+      /* تحسينات جوهرية لربط الحروف العربية */
       .font-heading {
         font-family: 'Noto Kufi Arabic', sans-serif;
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
       }
       * {
         letter-spacing: normal !important;
         word-spacing: normal !important;
         text-rendering: optimizeLegibility;
       }
-      /* حاوية التحميل المخفية */
+      /* حاوية التحميل المخفية بعيداً عن الرؤية */
       .capture-hidden-layer {
         position: absolute;
-        left: -5000px;
+        left: -9999px;
         top: 0;
         z-index: -100;
         pointer-events: none;
@@ -58,5 +64,7 @@
 </head>
   <body>
     <div id="root"></div>
+    <!-- التأكد من استدعاء ملف index.tsx كـ Module ليعمل التطبيق -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
